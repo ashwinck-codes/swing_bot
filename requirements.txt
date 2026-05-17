@@ -1,0 +1,5 @@
+yfinance==0.2.36
+requests==2.32.3
+python-dotenv==1.0.0
+ta==0.11.0
+pandas==2.2.0

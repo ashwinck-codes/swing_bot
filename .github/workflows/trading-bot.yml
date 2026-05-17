@@ -1,0 +1,28 @@
+name: Trading Bot
+
+on:
+  schedule:
+    - cron: '15 14 * * 1-5'   # 10:15 AM EST (Mon–Fri)
+    - cron: '0 22 * * 1-5'    # 6:00 PM EST (Mon–Fri)
+  workflow_dispatch:           # allows manual run
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run bot
+        run: python bot.py
