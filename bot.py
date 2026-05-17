@@ -76,7 +76,26 @@ def get_data(ticker, period="8mo"):
 
         time.sleep(3)
 
-    print(f"All retries failed for ticker '{ticker}'")
+    print(f"Attempting fallback history download for '{ticker}'")
+    try:
+        df = yf.Ticker(ticker).history(
+            period=period,
+            interval="1d",
+            auto_adjust=True,
+            actions=False,
+            prepost=False,
+        )
+
+        if df is not None and not df.empty:
+            if isinstance(df.columns[0], tuple):
+                df.columns = [c[0] for c in df.columns]
+            return df.dropna()
+
+        print(f"Fallback history returned empty data for '{ticker}'")
+    except Exception as e:
+        print(f"Fallback history failed for '{ticker}': {e}")
+
+    print(f"All retries and fallback failed for ticker '{ticker}'")
     return None
 
 
