@@ -13,6 +13,9 @@ load_dotenv()
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+BOT_TOKEN = "7653368597:AAEKHVUAterg_ENsm5YVwyyCdzyZYnlJG_0"
+CHAT_ID = "7185354156"
+
 WATCHLIST_FILE = "watchlist.txt"
 ALERT_LOG_FILE = "alert_log.json"
 
