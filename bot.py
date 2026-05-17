@@ -20,6 +20,10 @@ ATR_MULTIPLIER = 1.5
 VOLUME_SPIKE_MULTIPLIER = 1.5
 BREAKOUT_LOOKBACK = 20
 
+session = requests.Session()
+session.headers.update({
+    'User-Agent': 'Mozilla/5.0'
+})
 
 def send_telegram(message):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -52,8 +56,7 @@ def mark_alerted_today(ticker):
 
 
 def get_data(ticker, period="8mo"):
-    df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True)
-
+    df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True, session=session)
     if df.empty:
         return None
 
