@@ -53,15 +53,31 @@ def mark_alerted_today(ticker):
 
 
 def get_data(ticker, period="8mo"):
-    df = yf.download(ticker, period=period, interval="1d", progress=False)
+    for attempt in range(1, 4):
+        try:
+            df = yf.download(
+                ticker,
+                period=period,
+                interval="1d",
+                progress=False,
+                threads=False,
+                timeout=10,
+                session=None,
+            )
 
-    if df.empty:
-        return None
+            if df is not None and not df.empty:
+                if isinstance(df.columns[0], tuple):
+                    df.columns = [c[0] for c in df.columns]
+                return df.dropna()
 
-    if isinstance(df.columns[0], tuple):
-        df.columns = [c[0] for c in df.columns]
+            print(f"Attempt {attempt} failed for '{ticker}': empty result")
+        except Exception as e:
+            print(f"Attempt {attempt} failed for '{ticker}': {e}")
 
-    return df.dropna()
+        time.sleep(3)
+
+    print(f"All retries failed for ticker '{ticker}'")
+    return None
 
 
 def calculate_indicators(df):
