@@ -19,7 +19,7 @@ ALERT_LOG_FILE = "alert_log.json"
 
 RISK_REWARD = 2.0
 ATR_MULTIPLIER = 1.5
-VOLUME_SPIKE_MULTIPLIER = 1.5
+VOLUME_SPIKE_MULTIPLIER = 1.2
 BREAKOUT_LOOKBACK = 20
 
 
@@ -121,10 +121,12 @@ def calculate_indicators(df):
 
 
 def market_is_healthy():
+    print("🔍 Checking market health (SPY & QQQ)...")
     spy = get_data("SPY")
     qqq = get_data("QQQ")
 
     if spy is None or qqq is None:
+        print("❌ Market filter: Failed to get data")
         return False
 
     spy = calculate_indicators(spy)
@@ -136,13 +138,19 @@ def market_is_healthy():
     spy_ok = spy_latest["Close"] > spy_latest["EMA20"] > spy_latest["EMA50"]
     qqq_ok = qqq_latest["Close"] > qqq_latest["EMA20"] > qqq_latest["EMA50"]
 
-    return spy_ok or qqq_ok
+    print(f"📊 SPY trend: {'✅ BULLISH' if spy_ok else '❌ WEAK'}")
+    print(f"📊 QQQ trend: {'✅ BULLISH' if qqq_ok else '❌ WEAK'}")
+    result = spy_ok or qqq_ok
+    print(f"🟢 Market filter: {'PASS ✅' if result else 'FAIL ❌'}")
+    return result
 
 
 def analyze_stock(ticker):
+    print(f"  📍 Analyzing {ticker}...")
     df = get_data(ticker)
 
     if df is None or len(df) < 80:
+        print(f"  ❌ {ticker}: Insufficient data")
         return None
 
     df = calculate_indicators(df)
@@ -198,7 +206,10 @@ def analyze_stock(ticker):
     buy_signal = score >= 75 and ema_bullish and rsi_good and volume_spike and breakout
 
     if not buy_signal:
+        print(f"  ⚠️ {ticker}: Score {score}/100 - No signal yet")
         return None
+    
+    print(f"  ✅ {ticker}: Score {score}/100 - SIGNAL FOUND!")
 
     entry = close
     stop = entry - (ATR_MULTIPLIER * latest["ATR"])
@@ -233,22 +244,29 @@ def position_size(account_size, risk_percent, entry, stop):
 
 
 def run_scan():
+    print(f"\n{'='*70}")
+    print(f"🤖 SWING BOT START - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'='*70}")
     send_telegram("Swing Bot started scanning...")
 
     if not market_is_healthy():
+        print("⛔ Market filter failed - aborting scan")
         send_telegram(
             "⚠️ Market filter failed.\n\nSPY/QQQ are not in a healthy trend. No new swing trades today."
         )
         return
 
+    print("✅ Market filter passed - starting scan")
     with open(WATCHLIST_FILE) as f:
         tickers = [line.strip().upper() for line in f if line.strip()]
 
+    print(f"📋 Scanning {len(tickers)} tickers: {', '.join(tickers)}\n")
     alerts = []
 
     for ticker in tickers:
         try:
             if already_alerted_today(ticker):
+                print(f"  ⏭️ {ticker}: Already alerted today")
                 continue
 
             result = analyze_stock(ticker)
@@ -258,15 +276,18 @@ def run_scan():
                 mark_alerted_today(ticker)
 
         except Exception as e:
-            print(f"Error analyzing {ticker}: {e}")
+            print(f"  ❌ Error analyzing {ticker}: {e}")
 
+    print(f"\n📊 Results: Found {len(alerts)} valid setup(s)")
     if not alerts:
+        print("🔚 No valid swing-trading setups found")
         send_telegram("No valid swing-trading setups found today.")
         return
 
     alerts = sorted(alerts, key=lambda x: x["score"], reverse=True)
 
     for a in alerts:
+        print(f"\n📧 Sending alert for {a['ticker']} (Score: {a['score']}/100)")
         msg = f"""
 📈 SWING TRADE ALERT
 
@@ -293,6 +314,10 @@ Take partial profit near target.
 Move stop to breakeven after +1R.
 """
         send_telegram(msg)
+    
+    print(f"\n{'='*70}")
+    print(f"✅ SWING BOT COMPLETE - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'='*70}\n")
 
 
 if __name__ == "__main__":

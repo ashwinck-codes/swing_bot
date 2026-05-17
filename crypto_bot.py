@@ -107,6 +107,7 @@ def add_indicators(data):
 # =========================
 
 def is_btc_market_ok():
+    print("🔍 Checking BTC market filter...")
     btc = yf.download(
         "BTC-USD",
         period=PERIOD,
@@ -118,6 +119,7 @@ def is_btc_market_ok():
     btc = fix_yfinance_columns(btc)
 
     if btc.empty or len(btc) < 60:
+        print("❌ BTC market filter: Insufficient data")
         return False
 
     btc = add_indicators(btc)
@@ -129,6 +131,11 @@ def is_btc_market_ok():
         latest["RSI"] >= 45
     )
 
+    if btc_ok:
+        print(f"✅ BTC market filter: PASS - RSI={latest['RSI']:.2f}, Price above EMA50")
+    else:
+        print(f"❌ BTC market filter: FAIL - RSI={latest['RSI']:.2f}")
+    
     return btc_ok
 
 
@@ -137,6 +144,7 @@ def is_btc_market_ok():
 # =========================
 
 def check_crypto_signal(symbol):
+    print(f"  📍 Analyzing {symbol}...")
     data = yf.download(
         symbol,
         period=PERIOD,
@@ -148,13 +156,14 @@ def check_crypto_signal(symbol):
     data = fix_yfinance_columns(data)
 
     if data.empty or len(data) < 60:
-        print(f"{symbol}: Not enough data")
+        print(f"  ❌ {symbol}: Insufficient data")
         return
 
     data = add_indicators(data)
     data = data.dropna()
 
     if data.empty:
+        print(f"  ❌ {symbol}: No valid data after indicator calculation")
         return
 
     latest = data.iloc[-1]
@@ -193,9 +202,8 @@ def check_crypto_signal(symbol):
         not_too_extended
     )
 
-    print(f"{symbol}: Signal={signal}")
-
     if signal:
+        print(f"  ✅ {symbol}: SIGNAL FOUND!")
         message = f"""
 🚀 CRYPTO SWING TRADE ALERT
 
@@ -224,6 +232,8 @@ Use small position size.
 Risk only 0.5% to 1% per trade.
 """
         send_telegram_message(message)
+    else:
+        print(f"  ⚠️ {symbol}: No signal (Trend:{trend_ok} RSI:{rsi_ok} Vol:{volume_ok} BO:{breakout_ok})")
 
 
 # =========================
@@ -231,30 +241,38 @@ Risk only 0.5% to 1% per trade.
 # =========================
 
 def run_bot():
-    print(f"Crypto bot started at {datetime.now()}")
+    print(f"\n{'='*70}")
+    print(f"🤖 CRYPTO BOT START - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'='*70}")
 
     if not is_btc_market_ok():
+        print("⛔ BTC market filter failed - aborting scan")
         message = """
 ⚠️ Crypto Market Filter
 
 BTC trend is weak right now.
 No new crypto swing trades suggested.
 """
-        print("BTC market filter failed")
         send_telegram_message(message)
         return
 
+    print("✅ BTC market filter passed - starting scan")
     with open(WATCHLIST_FILE) as f:
         tickers = [line.strip().upper() for line in f if line.strip()]
-        
+    
+    print(f"📋 Scanning {len(tickers)} crypto pairs: {', '.join(tickers)}\n")
+    
+    signal_count = 0
     for symbol in tickers:
         try:
             check_crypto_signal(symbol)
             
         except Exception as e:
-            print(f"Error checking {symbol}: {e}")
+            print(f"  ❌ Error checking {symbol}: {e}")
 
-    print("Crypto bot completed")
+    print(f"\n{'='*70}")
+    print(f"✅ CRYPTO BOT COMPLETE - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'='*70}\n")
 
 
 if __name__ == "__main__":
