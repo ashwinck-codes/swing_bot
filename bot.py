@@ -19,7 +19,7 @@ ALERT_LOG_FILE = "alert_log.json"
 
 RISK_REWARD = 2.0
 ATR_MULTIPLIER = 1.5
-VOLUME_SPIKE_MULTIPLIER = 1.2
+VOLUME_SPIKE_MULTIPLIER = 1.5
 BREAKOUT_LOOKBACK = 20
 
 
@@ -243,11 +243,68 @@ def position_size(account_size, risk_percent, entry, stop):
     return int(risk_amount / risk_per_share)
 
 
+
+def get_top_momentum_stocks():
+    """
+    Fetch top 100 momentum stocks based on:
+    - Price change (3M)
+    - Volume
+    Then return top 20
+    """
+
+    # Broad universe (you can expand later)
+    universe = [
+        "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA","AMD","PLTR","AVGO",
+        "COST","NFLX","CRM","NOW","SHOP","SQ","UBER","PANW","CRWD","SNOW",
+        "DDOG","NET","ADBE","INTU","PYPL","COIN","MRNA","LLY","NVO","TSM",
+        "ASML","MU","LRCX","KLAC","MELI","SE","ROKU","ZM","DOCU","TEAM",
+        "OKTA","ZS","MDB","HUBS","WDAY","FTNT","ANET","CDNS","SNPS","ORCL",
+        "QCOM","TXN","ADI","NXPI","AMAT","DELL","HPQ","BABA","JD","PDD",
+        "FSLR","ENPH","SEDG","RIVN","LCID","NIO","XPEV","LI","BA","CAT",
+        "GE","HON","UPS","FDX","WMT","TGT","HD","LOW","DIS","SBUX",
+        "KO","PEP","MCD","NKE","LULU","ABNB","BKNG","EXPE","UBER","LYFT",
+        "SPOT","SQ","SHOP","CRWD","PANW","DDOG","NET","SNOW","MDB","ZS"
+    ]
+
+    momentum_scores = []
+
+    for ticker in set(universe):
+        df = get_data(ticker, period="6mo")
+
+        if df is None or len(df) < 60:
+            continue
+
+        try:
+            # 3-month momentum
+            price_now = df["Close"].iloc[-1]
+            price_3m = df["Close"].iloc[-60]
+
+            change_pct = (price_now - price_3m) / price_3m
+
+            # avg volume
+            avg_vol = df["Volume"].tail(20).mean()
+            score = change_pct * avg_vol  # simple momentum score
+            momentum_scores.append((ticker, score))
+
+        except:
+            continue
+
+    # sort descending
+    momentum_scores = sorted(momentum_scores, key=lambda x: x[1], reverse=True)
+
+    # pick top 20
+    top_20 = [t[0] for t in momentum_scores[:20]]
+
+    print(f"\n🔥 Top 20 Momentum Stocks: {top_20}\n")
+
+    return top_20
+
+
 def run_scan():
     print(f"\n{'='*70}")
     print(f"🤖 SWING BOT START - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*70}")
-    send_telegram("Swing Bot started scanning...")
+    #send_telegram("Swing Bot started scanning...")
 
     if not market_is_healthy():
         print("⛔ Market filter failed - aborting scan")
@@ -257,8 +314,9 @@ def run_scan():
         return
 
     print("✅ Market filter passed - starting scan")
-    with open(WATCHLIST_FILE) as f:
-        tickers = [line.strip().upper() for line in f if line.strip()]
+    # with open(WATCHLIST_FILE) as f:
+    #     tickers = [line.strip().upper() for line in f if line.strip()]
+    tickers = get_top_momentum_stocks()
 
     print(f"📋 Scanning {len(tickers)} tickers: {', '.join(tickers)}\n")
     alerts = []
@@ -281,7 +339,7 @@ def run_scan():
     print(f"\n📊 Results: Found {len(alerts)} valid setup(s)")
     if not alerts:
         print("🔚 No valid swing-trading setups found")
-        send_telegram("No valid swing-trading setups found today.")
+        #send_telegram("No valid swing-trading setups found today.")
         return
 
     alerts = sorted(alerts, key=lambda x: x["score"], reverse=True)
