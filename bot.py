@@ -19,7 +19,7 @@ ALERT_LOG_FILE = "alert_log.json"
 
 RISK_REWARD = 2.0
 ATR_MULTIPLIER = 1.5
-VOLUME_SPIKE_MULTIPLIER = 1.5
+VOLUME_SPIKE_MULTIPLIER = 1.2
 BREAKOUT_LOOKBACK = 20
 
 
@@ -255,7 +255,7 @@ def get_top_momentum_stocks():
     # Broad universe (you can expand later)
     universe = [
         "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA","AMD","PLTR","AVGO",
-        "COST","NFLX","CRM","NOW","SHOP","SQ","UBER","PANW","CRWD","SNOW",
+        "COST","NFLX","CRM","NOW","SHOP","UBER","PANW","CRWD","SNOW",
         "DDOG","NET","ADBE","INTU","PYPL","COIN","MRNA","LLY","NVO","TSM",
         "ASML","MU","LRCX","KLAC","MELI","SE","ROKU","ZM","DOCU","TEAM",
         "OKTA","ZS","MDB","HUBS","WDAY","FTNT","ANET","CDNS","SNPS","ORCL",
@@ -263,7 +263,7 @@ def get_top_momentum_stocks():
         "FSLR","ENPH","SEDG","RIVN","LCID","NIO","XPEV","LI","BA","CAT",
         "GE","HON","UPS","FDX","WMT","TGT","HD","LOW","DIS","SBUX",
         "KO","PEP","MCD","NKE","LULU","ABNB","BKNG","EXPE","UBER","LYFT",
-        "SPOT","SQ","SHOP","CRWD","PANW","DDOG","NET","SNOW","MDB","ZS"
+        "SPOT","SHOP","CRWD","PANW","DDOG","NET","SNOW","MDB","ZS"
     ]
 
     momentum_scores = []

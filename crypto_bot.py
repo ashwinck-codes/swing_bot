@@ -253,7 +253,7 @@ def run_bot():
 BTC trend is weak right now.
 No new crypto swing trades suggested.
 """
-        send_telegram_message(message)
+        #send_telegram_message(message)
         return
 
     print("✅ BTC market filter passed - starting scan")
