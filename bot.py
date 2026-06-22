@@ -299,6 +299,96 @@ def get_top_momentum_stocks():
 
     return top_20
 
+ETF_LIST = ["SMH", "QQQ", "VOO", "BOTZ", "SRVR", "WGMI"]
+
+def analyze_etf_dip(ticker):
+    df = get_data(ticker, period="6mo")
+
+    if df is None or len(df) < 50:
+        return None
+
+    df = calculate_indicators(df)
+    latest = df.iloc[-1]
+
+    close = latest["Close"]
+    ema20 = latest["EMA20"]
+    ema50 = latest["EMA50"]
+    rsi = latest["RSI"]
+
+    # Trend condition
+    uptrend = close > ema50
+
+    # Dip condition
+    near_ema20 = abs(close - ema20) / ema20 < 0.02
+    near_ema50 = abs(close - ema50) / ema50 < 0.03
+
+    # RSI cooling
+    rsi_good = 35 <= rsi <= 50
+
+    if uptrend and (near_ema20 or near_ema50) and rsi_good:
+        return {
+            "ticker": ticker,
+            "price": round(close, 2),
+            "ema20": round(ema20, 2),
+            "ema50": round(ema50, 2),
+            "rsi": round(rsi, 2),
+            "zone": "EMA20" if near_ema20 else "EMA50"
+        }
+
+    return None
+
+
+def run_etf_dip_scan():
+    #send_telegram("📉 ETF Dip Scanner Running...")
+
+    alerts = []
+    if not market_is_healthy():
+        print("⛔ Market filter failed - aborting scan")
+        send_telegram("⚠️ Skipping ETF dip buys - market weak")
+        return
+
+    for ticker in ETF_LIST:
+        try:
+            if already_alerted_today(ticker):
+                continue
+
+            result = analyze_etf_dip(ticker)
+
+            if result:
+                alerts.append(result)
+                mark_alerted_today(ticker)
+
+        except Exception as e:
+            print(f"Error analyzing {ticker}: {e}")
+    
+    print(f"\n📊 Results: Found {len(alerts)} valid setup(s)")
+
+
+    if not alerts:
+        send_telegram("No ETF dip opportunities today.")
+        return
+
+    for a in alerts:
+        print(f"\n📧 Sending alert for {a['ticker']}")
+        msg = f"""
+📉 ETF DIP BUY ALERT
+
+Ticker: {a['ticker']}
+Price: ${a['price']}
+
+Pullback Zone: {a['zone']}
+EMA20: {a['ema20']}
+EMA50: {a['ema50']}
+RSI: {a['rsi']}
+
+Strategy:
+- Buy near current levels
+- Add more if it touches EMA50
+- Hold for trend continuation
+
+This is a DIP in an UPTREND.
+"""
+        send_telegram(msg)
 
 def run_scan():
     print(f"\n{'='*70}")
@@ -380,3 +470,4 @@ Move stop to breakeven after +1R.
 
 if __name__ == "__main__":
     run_scan()
+    run_etf_dip_scan() # new ETF dip scanner
